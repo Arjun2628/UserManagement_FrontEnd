@@ -1,6 +1,8 @@
 import 'package:firstnode_frontend/data/http/http.dart';
-import 'package:firstnode_frontend/data/provider/userprovider.dart';
+import 'package:firstnode_frontend/data/provider/userApiprovider.dart';
+import 'package:firstnode_frontend/data/provider/userProvider.dart';
 import 'package:firstnode_frontend/domain/models/user_model/user_model.dart';
+import 'package:firstnode_frontend/precentation/view/manage_users/add_user.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,14 +17,26 @@ class _HomeState extends State<Home> {
   void initState() {
     // AllUsers allUsers=AllUsers();
     // allUsers.getAllUsers();
-    Provider.of<UserProvider>(context, listen: false).getAllUsers();
+    Provider.of<UserApiProvider>(context, listen: false).getAllUsers();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Consumer<UserProvider>(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: Icon(
+          Icons.home,
+          color: Colors.white,
+        ),
+        title: Text(
+          'Home',
+          style: TextStyle(color: Colors.white, fontSize: 24),
+        ),
+      ),
+      body: Consumer<UserApiProvider>(
         builder: (context, value, child) => ListView.builder(
           itemCount: value.userdetails.length,
           itemBuilder: (context, index) {
@@ -51,7 +65,7 @@ class _HomeState extends State<Home> {
                               child: Text('Cancel')),
                           ElevatedButton(
                               onPressed: () async {
-                                await Provider.of<UserProvider>(context,
+                                await Provider.of<UserApiProvider>(context,
                                         listen: false)
                                     .deleteUser(user.id!);
                                 Navigator.pop(context);
@@ -63,10 +77,19 @@ class _HomeState extends State<Home> {
                   );
                 },
                 child: Container(
-                  color: Colors.black,
+                  color: Colors.grey,
                   child: ListTile(
+                    leading: Container(
+                      child: CircleAvatar(
+                        backgroundImage: NetworkImage(user.profileImage!),
+                      ),
+                    ),
                     title: Text(
                       user.name!,
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      user.email!,
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
@@ -78,10 +101,12 @@ class _HomeState extends State<Home> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // await Provider.of<UserProvider>(context, listen: false)
-          // .addUser("Sahil saleem");
-
-          _showBottomSheet(context);
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddUser(),
+              ));
+          // _showBottomSheet(context);
         },
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -105,13 +130,33 @@ class _HomeState extends State<Home> {
                 TextField(
                   controller: userController,
                 ),
-                ElevatedButton(
-                    onPressed: () async {
-                      await Provider.of<UserProvider>(context, listen: false)
-                          .addUser(userController.text);
-                      Navigator.pop(context);
-                    },
-                    child: Text("Add new user"))
+                Consumer<UserProvider>(
+                  builder: (context, value, child) => ElevatedButton(
+                      onPressed: () async {
+                        if (value.photo != null) {
+                          if (value.nameController.text != "") {
+                            if (value.ageController.text != "") {
+                              if (value.emailController.text != "") {
+                                await value.cloudAdd(value.photo!);
+                                Map<String, dynamic> newUser = {
+                                  "name": value.nameController.text,
+                                  "age": value.ageController.text,
+                                  "email": value.emailController.text
+                                };
+                                await Provider.of<UserApiProvider>(context,
+                                        listen: false)
+                                    .addUser(newUser);
+                                Navigator.pop(context);
+                              }
+                            }
+                          }
+                        }
+                        // await Provider.of<UserApiProvider>(context, listen: false)
+                        //     .addUser();
+                        Navigator.pop(context);
+                      },
+                      child: Text("Add new user")),
+                )
               ],
             ),
           ),
@@ -136,7 +181,7 @@ class _HomeState extends State<Home> {
                 ),
                 ElevatedButton(
                     onPressed: () async {
-                      await Provider.of<UserProvider>(context, listen: false)
+                      await Provider.of<UserApiProvider>(context, listen: false)
                           .updateUser(user.id!, userController.text);
                       Navigator.pop(context);
                     },

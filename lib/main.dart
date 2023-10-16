@@ -1,9 +1,13 @@
-import 'package:firstnode_frontend/data/provider/userprovider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firstnode_frontend/data/provider/userApiprovider.dart';
+import 'package:firstnode_frontend/data/provider/userProvider.dart';
 import 'package:firstnode_frontend/precentation/view/home/home.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+void main()async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -15,7 +19,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => UserProvider(),)
+        ChangeNotifierProvider(create: (context) => UserApiProvider()),
+        ChangeNotifierProvider(create: (context) => UserProvider()),
       ],
       child: MaterialApp(
         title: 'Flutter Demo',

@@ -1,107 +1,100 @@
-import 'dart:convert';
+import 'dart:io';
 
+import 'package:cloudinary_public/cloudinary_public.dart';
+import 'package:cloudinary_url_gen/cloudinary.dart';
+import 'package:cloudinary_url_gen/transformation/resize/resize.dart';
+import 'package:cloudinary_url_gen/transformation/transformation.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firstnode_frontend/data/api/users.dart';
-import 'package:firstnode_frontend/domain/models/user_model/user_model.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
 class UserProvider extends ChangeNotifier {
-  List<UserModel> userdetails = [];
+  TextEditingController nameController = TextEditingController();
+  TextEditingController ageController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
+  String profilePath = "";
+  String profileImageUrl = "";
+  File? photo;
+  String imageUri = "";
+  // getImage(ImageSource source) async {
+  //   final picker = ImagePicker();
+  //   final image = await picker.pickImage(source: ImageSource.gallery);
+  //   final path = image!.path;
+  //   // profilePath = path;
+  //   if (path != "") {
+  //     await cloudinaryAdd();
+  //   }
+  //   notifyListeners();
+  // }
 
-  getUserData(List<UserModel> data) {
-    userdetails = data;
+  // Future getImage(ImageSource source) async {
+  //   final image = await ImagePicker().pickImage(source: source);
+  //   if (image != null) {
+  //     final photoTemp = File(image.path);
+  //     photo = photoTemp;
+  //     await cloudinaryAdd(photoTemp.path);
+  //     notifyListeners();
+  //   } else {
+  //     return;
+  //   }
+  // }
+
+  // cloudinaryAdd(String path) async {
+  //   final cloudinary =
+  //       CloudinaryPublic('dpqjft6lq', 'f6eidgPaCRT9ozU_si1QngYP72M');
+  //   final response = await cloudinary.uploadFile(
+  //     CloudinaryFile.fromFile(path), // Changed from `profilePath` to `path`
+  //   );
+  //   final imageUrl = response.secureUrl;
+  //   profileImageUrl = imageUrl;
+  //   notifyListeners();
+  // }
+
+  Future getImage(ImageSource source) async {
+    final image = await ImagePicker().pickImage(source: source);
+    if (image != null) {
+      final phototemp = File(image.path);
+
+      photo = phototemp;
+
+      notifyListeners();
+    } else {
+      return;
+    }
+  }
+
+  Future<void> cloudAdd(File file) async {
+    final Reference storageref = FirebaseStorage.instance
+        .ref()
+        .child('userProfiles/${DateTime.now().millisecondsSinceEpoch}');
+
+    final UploadTask uploadTask = storageref.putFile(file);
+    TaskSnapshot snap = await uploadTask;
+
+    final String downloadUrl = await snap.ref.getDownloadURL();
+    imageUri = downloadUrl;
     notifyListeners();
   }
 
-  // get all users
-  Future<void> getAllUsers() async {
-    try {
-      final response = await http.get(Uri.parse(allUsersApi));
+  Future<String?> uploadImageToCloudinary() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
-      if (response.statusCode == 200) {
-        Iterable data = jsonDecode(response.body);
-        List<UserModel> users =
-            data.map((user) => UserModel.fromJson(user)).toList();
-        // return users;
-        userdetails = users;
-        notifyListeners();
-      } else {
-        throw Exception(
-            'Failed to load users, status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Failed to load users: $e');
+    if (image == null) {
+      return null; // No image selected
     }
-  }
 
-//  add new user
-  Future<void> addUser(String username) async {
-    try {
-      var url = Uri.parse("http://10.0.12.146:3001/adduser/$username");
-      var response = await http.post(url);
-
-      if (response.statusCode == 200) {
-        // print("User added successfully");
-        Iterable data = jsonDecode(response.body);
-        List<UserModel> users =
-            data.map((user) => UserModel.fromJson(user)).toList();
-        // return users;
-        userdetails = users;
-        notifyListeners();
-      } else {
-        print("Failed to add user, status code: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Failed to add user: $e");
-    }
-  }
-
-  Future<void> updateUser(String id, String name) async {
-    var url = Uri.parse(updateUserApi);
-    var body = jsonEncode({"id": id, "name": name});
-
-    var response = await http.put(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: body,
+    final cloudinary =
+        CloudinaryPublic('cloud_name', 'upload_preset', cache: false);
+    final response = await cloudinary.uploadFile(
+      CloudinaryFile.fromFile(image.path,
+          resourceType: CloudinaryResourceType.Image),
     );
 
-    if (response.statusCode == 200) {
-      Iterable data = jsonDecode(response.body);
-      List<UserModel> users =
-          data.map((user) => UserModel.fromJson(user)).toList();
-      // return users;
-      userdetails = users;
-      notifyListeners();
-      // print('User updated successfully');
-      // print(jsonDecode(response.body));
-    } else {
-      print('Failed to update user. Error: ${response.statusCode}');
-    }
+    return response.secureUrl;
   }
 
-  Future<void> deleteUser(String id) async {
-    var url = Uri.parse(deleteUserApi);
-     var body = jsonEncode({"id": id});
-
-     var response = await http.delete(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
-
-      if (response.statusCode == 200) {
-      Iterable data = jsonDecode(response.body);
-      List<UserModel> users =
-          data.map((user) => UserModel.fromJson(user)).toList();
-      // return users;
-      userdetails = users;
-      notifyListeners();
-      // print('User updated successfully');
-      // print(jsonDecode(response.body));
-    } else {
-      print('Failed to update user. Error: ${response.statusCode}');
-    }
-
-  }
+  
 }
